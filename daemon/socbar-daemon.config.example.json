@@ -1,0 +1,13 @@
+{
+  "_comment": "Copie ce fichier en socbar-daemon.config.json et renseigne ton cluster. Token = Datacenter > Permissions > API Tokens (rôle PVEAuditor conseillé, lecture seule).",
+  "proxmox": {
+    "url": "https://your-pve-host:8006",
+    "token": "flexbar@pve!readonly=00000000-0000-0000-0000-000000000000",
+    "insecureTLS": true
+  },
+  "serialPath": "/dev/ttyACM0",
+  "refreshMs": 3000,
+  "detailRotateMs": 3000,
+  "_comment_slots": "Position de chaque widget sur la barre (index de key) — dépend de ta disposition. Largeurs surchargeables via brandW/overviewW/alertsW/vmsW/diskW.",
+  "slots": { "brand": 0, "overview": 1, "alerts": 2, "vms": 3, "disk": 4 }
+}

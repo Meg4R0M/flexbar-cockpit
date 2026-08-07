@@ -1,0 +1,32 @@
+{
+  "_comment": "Flux SOC affiches en tuiles a droite des metriques locales. value = nombre d'items. Mets enabled:true et renseigne url/token/countPath. Laisse tout desactive pour n'afficher que CPU/RAM/LOAD/CLOCK.",
+  "feeds": [
+    {
+      "enabled": false,
+      "label": "CTI",
+      "url": "https://cti.CLIENT.example/api/observables/count",
+      "headerName": "Authorization",
+      "token": "Bearer REMPLACE_MOI",
+      "countPath": "data.total",
+      "warn": 1,
+      "crit": 25,
+      "timeoutMs": 2500
+    },
+    {
+      "enabled": false,
+      "label": "HIVE",
+      "url": "https://hive.CLIENT.example/api/case/_stats",
+      "headerName": "Authorization",
+      "token": "Bearer REMPLACE_MOI",
+      "countPath": "open",
+      "warn": 1,
+      "crit": 10,
+      "timeoutMs": 2500
+    }
+  ],
+  "_comment_monitors": "Sites surveilles par la key SOC Uptime : etat (up/down) + temps de reponse. warnMs = seuil orange, timeoutMs = au-dela = DOWN.",
+  "monitors": [
+    { "enabled": true, "label": "CYBER", "emoji": "⚔️🛡️", "url": "https://humanix-cybersecurity.fr", "warnMs": 800, "timeoutMs": 5000 },
+    { "enabled": true, "label": "ACADEMIE", "emoji": "🦊🎓", "url": "https://humanix-academie.fr", "warnMs": 800, "timeoutMs": 5000 }
+  ]
+}

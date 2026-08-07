@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# SECRET — vrai config du démon avec le token Proxmox (ne publier que le .example)
+daemon/socbar-daemon.config.json
+
+# Artefacts de rétro-ingénierie (captures brutes) — gardés en local, non publiés
+*.log
+
+# Sondes de police jetables
+daemon/emojitest*.js
+
+# OS / éditeur
+.DS_Store
+*.swp

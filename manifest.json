@@ -1,0 +1,64 @@
+{
+  "name": "SOC Bar",
+  "uuid": "com.meg4r0m.socbar",
+  "version": "0.1.0",
+  "author": "meg4r0m",
+  "entry": "backend/plugin.cjs",
+  "description": "Barre d'etat SOC/pentest : metriques live + actions tactiles avec retour haptique.",
+  "repo": "local",
+  "sdk": { "version": "1.0.0" },
+  "software": { "minimumVersion": "1.0.0" },
+  "os": [
+    { "platform": "mac", "minimumVersion": "10.15" },
+    { "platform": "windows", "minimumVersion": "10" }
+  ],
+  "device": [
+    { "name": "flexbar", "version": "1.0.0" }
+  ],
+  "keyLibrary": {
+    "title": "SOC Bar",
+    "style": { "icon": "mdi mdi-shield-search" },
+    "children": [
+      {
+        "title": "SOC Dashboard",
+        "tip": "Bandeau de metriques live (CPU / RAM / charge / horloge + flux SOC config-driven)",
+        "cid": "com.meg4r0m.socbar.dashboard",
+        "config": { "keyType": "default", "clickable": true, "platform": ["mac", "windows"] },
+        "style": { "icon": "mdi mdi-shield-monitor", "width": 600 },
+        "data": {}
+      },
+      {
+        "title": "SOC Uptime",
+        "tip": "Etat + temps de reponse des sites surveilles (humanix-cybersecurity.fr, humanix-academie.fr)",
+        "cid": "com.meg4r0m.socbar.uptime",
+        "config": { "keyType": "default", "clickable": true, "platform": ["mac", "windows"] },
+        "style": { "icon": "mdi mdi-heart-pulse", "width": 400 },
+        "data": {}
+      },
+      {
+        "title": "SOC Agenda",
+        "tip": "Prochain evenement du calendrier Apple (heure + titre + delai). Necessite l'autorisation Calendrier de FlexDesigner.",
+        "cid": "com.meg4r0m.socbar.agenda",
+        "config": { "keyType": "default", "clickable": true, "platform": ["mac"] },
+        "style": { "icon": "mdi mdi-calendar-clock", "width": 460 },
+        "data": {}
+      },
+      {
+        "title": "SOC USB",
+        "tip": "Peripheriques USB connectes : nombre + nom du peripherique selectionne ; tap = suivant ; alerte au branchement/debranchement",
+        "cid": "com.meg4r0m.socbar.usb",
+        "config": { "keyType": "default", "clickable": true, "platform": ["mac", "windows"] },
+        "style": { "icon": "mdi mdi-usb-port", "width": 500 },
+        "data": {}
+      },
+      {
+        "title": "SOC Action",
+        "tip": "Bouton tactile avec retour haptique (refresh du bandeau)",
+        "cid": "com.meg4r0m.socbar.action",
+        "config": { "keyType": "default", "clickable": true, "platform": ["mac", "windows"] },
+        "style": { "icon": "mdi mdi-radar", "width": 120 },
+        "data": { "action": "refresh" }
+      }
+    ]
+  }
+}

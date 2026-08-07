@@ -1,0 +1,19 @@
+[Unit]
+Description=Flexbar cluster daemon (Proxmox cockpit)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adapte User / chemins selon ton déploiement (hôte ou LXC).
+User=root
+WorkingDirectory=/opt/flexbar-daemon
+Environment=SOCBAR_CONFIG=/opt/flexbar-daemon/socbar-daemon.config.json
+ExecStart=/usr/bin/node /opt/flexbar-daemon/daemon.js
+Restart=always
+RestartSec=3
+# La barre = périphérique USB CDC ; laisse le temps qu'elle apparaisse au boot.
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target

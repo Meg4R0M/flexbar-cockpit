@@ -1,0 +1,12 @@
+{
+  "name": "flexbar-daemon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Headless daemon driving the ENIAC Flexbar over its serial protocol (no FlexDesigner). Linux/Proxmox target.",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.65",
+    "pngjs": "7.0.0",
+    "serialport": "^13.0.0"
+  }
+}

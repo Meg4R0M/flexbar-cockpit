@@ -1,0 +1,18 @@
+{
+  "name": "flexbar-socbar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "SOC/pentest status bar plugin for the ENIAC Flexbar (FlexDesigner v1).",
+  "scripts": {
+    "validate": "flexcli plugin validate --path .",
+    "link": "flexcli plugin link --path . --uuid com.meg4r0m.socbar --force --start true",
+    "unlink": "flexcli plugin unlink --uuid com.meg4r0m.socbar --silent",
+    "restart": "flexcli plugin restart --uuid com.meg4r0m.socbar",
+    "logs": "flexcli plugin debug --uuid com.meg4r0m.socbar"
+  },
+  "dependencies": {
+    "@eniac/flexdesigner": "^1.0.9",
+    "@napi-rs/canvas": "^0.1.65"
+  }
+}

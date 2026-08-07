@@ -1,102 +1,215 @@
-# Flexbar Cockpit
+<div align="center">
 
-Détourne la **[ENIAC Flexbar](https://eniacbox.com/)** (barre AMOLED tactile à base d'ESP32-S3)
-en **cockpit de supervision d'un cluster Proxmox** — piloté par un **démon headless**, **sans
-FlexDesigner**, directement depuis un nœud Linux.
+# ⚡ Flexbar Cockpit
 
-![Cockpit](assets/cockpit.png)
+### La **ENIAC Flexbar** détournée en cockpit de supervision **Proxmox** — sans FlexDesigner.
 
-*(Données de démonstration ci-dessus. Police [Orbitron](https://fonts.google.com/specimen/Orbitron),
-emojis couleur, sparklines CPU/RAM et jauge disque rendus par le démon.)*
+[![License: MIT](https://img.shields.io/badge/License-MIT-3fb950.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Proxmox VE](https://img.shields.io/badge/Proxmox-VE-E57000?logo=proxmox&logoColor=white)](https://www.proxmox.com)
+[![ESP32-S3](https://img.shields.io/badge/ESP32--S3-USB%20CDC-E7352C?logo=espressif&logoColor=white)](https://www.espressif.com)
+![FlexDesigner not required](https://img.shields.io/badge/FlexDesigner-not%20required-1f6feb)
+[![Stars](https://img.shields.io/github/stars/Meg4R0M/flexbar-cockpit?color=d29922)](https://github.com/Meg4R0M/flexbar-cockpit/stargazers)
+
+<img src="assets/cockpit.png" width="700" alt="Cockpit Flexbar : marque, stats cluster, alertes, VMs, disque">
+
+**Un nœud Linux. Un câble USB. Le cluster entier sur une barre AMOLED.**
+
+</div>
 
 ---
 
-## Pourquoi
+## 🎯 Le pitch
 
-La Flexbar est vendue avec **FlexDesigner** (appli Electron macOS/Windows) : pratique, mais il
-faut l'appli lancée en permanence, sur un poste avec interface graphique. Ici on **rétro-conçoit
-le protocole série** (USB CDC, non chiffré) pour dessiner sur la barre depuis n'importe quelle
-machine Linux — typiquement **un nœud du cluster qu'elle supervise**. La barre devient un écran
-d'état permanent, autonome, à côté du rack.
+La Flexbar est une superbe barre tactile AMOLED… livrée avec **FlexDesigner**, une appli Electron
+qu'il faut garder ouverte en permanence sur un poste **graphique**. Frustrant quand on veut juste
+un **écran d'état permanent posé à côté du rack**.
 
-## Deux artefacts
+Alors on a **rétro-conçu son protocole série** (USB CDC, en clair) et écrit un **démon headless**
+qui la pilote depuis n'importe quel Linux — typiquement un **LXC sur le cluster Proxmox qu'elle
+supervise**. Résultat : nœuds, VMs, CPU/RAM, alertes et disque, en temps réel, **zéro appli
+graphique**.
 
-| Dossier | Quoi | Plateforme |
-|---|---|---|
-| **[`daemon/`](daemon/)** | ⭐ Le **démon headless** : lit l'API Proxmox et dessine le cockpit sur la barre, sans FlexDesigner. | Linux (nœud/LXC) |
-| **[`backend/`](backend/)** + [`PLUGIN.md`](PLUGIN.md) | Le **plugin FlexDesigner** d'origine (métriques locales, uptime sites, USB, agenda…). | macOS + FlexDesigner |
+> 🧠 Le firmware d'usine est **conservé** — on ne fait que parler sa langue.
 
-Le protocole série rétro-conçu est documenté dans **[`PROTOCOL.md`](PROTOCOL.md)**.
+## ✨ Fonctionnalités
 
-## Le cockpit (démon) — 5 tuiles
+|  |  |
+|---|---|
+| 🖥️ **Vue cluster** | nœuds en ligne · VMs actives · CPU % · RAM % agrégés |
+| 📈 **Sparklines** | historique glissant CPU/RAM en fond de tuile |
+| 🚨 **Alertes auto** | nœud HS + stockage ≥ 80 % / ≥ 90 %, dérivées de l'état réel |
+| 🐧 **Rotation VMs** | LXC/QEMU, **templates exclus**, CPU/RAM par invité |
+| 💾 **Disque cluster** | espace libre **agrégé** + jauge d'utilisation |
+| 🎨 **Style** | emojis couleur · police [Orbitron](https://fonts.google.com/specimen/Orbitron) · code couleur par seuil |
+| 🔌 **Résilient** | reconnexion auto (la barre se ré-énumère au boot) |
+| 🔒 **Lecture seule** | token PVEAuditor — aucune action possible sur le cluster |
 
-1. **🛡 Marque** — logo / wordmark.
-2. **🖥 Stats cluster** — nœuds en ligne, VMs actives, CPU %, RAM % (avec **sparklines** d'historique glissant sous CPU/RAM).
-3. **🚨 Alertes** — dérivées de l'état du cluster : nœud hors-ligne, stockage ≥ 80 % (orange) / ≥ 90 % (rouge). ✅ **OK** sinon. Rotation si plusieurs.
-4. **🐧/🖥 VMs** — rotation sur les invités (LXC/QEMU), **templates exclus**, nom + CPU/RAM % (ou *stoppé*).
-5. **💾 Disque** — espace libre **agrégé sur tout le cluster** + jauge d'utilisation.
+## 🖼️ Anatomie du cockpit
 
-Le tout : emojis couleur en préfixe, code couleur par seuil (vert/orange/rouge), rendu en PNG.
+De haut en bas sur l'image = de gauche à droite sur la barre (5 keys) :
 
-## Comment ça marche
+| # | Tuile | Contenu |
+|---|-------|---------|
+| 0 | 🛡 **Marque** | logo / wordmark |
+| 1 | 🖥 **Stats** | `NODES` · `VMS` · `CPU` (+ sparkline) · `RAM` (+ sparkline) |
+| 2 | 🚨 **Alertes** | worst-of du cluster, rotation, ou ✅ **OK** |
+| 3 | 🐧 **VMs** | rotation sur les invités, nom + CPU/RAM % (ou *stoppé*) |
+| 4 | 💾 **Disque** | `X To libre` + jauge d'utilisation |
 
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+  PVE["Proxmox API<br/>/cluster/resources"] -->|"token RO"| D
+  subgraph D["Démon Node.js (headless)"]
+    direction TB
+    M["metrics.js<br/>alertes · disque"]
+    R["render.js<br/>@napi-rs/canvas → PNG RGB"]
+    P["protocol.js<br/>trame série"]
+  end
+  D -->|"USB CDC · 1 PNG / key"| BAR["🟦 Flexbar<br/>ESP32-S3 · AMOLED"]
+  BAR -.->|"événements tap"| D
 ```
-Nœud Proxmox (Linux)
-  ├── proxmox.js   → API REST /cluster/resources (token lecture seule PVEAuditor)
-  ├── metrics.js   → alertes + agrégat disque (dédup shared vs par-nœud)
-  ├── render.js    → @napi-rs/canvas → PNG RGB (colortype 2)  [emoji + Orbitron]
-  └── protocol.js  → trame série rétro-conçue  ──USB CDC──►  Flexbar (ESP32-S3, AMOLED)
-```
 
-- **Rendu** : [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (Skia, prébuilts Linux) → PNG **RGB (colortype 2, pas RGBA)**, sinon la barre affiche des rayures.
-- **Transport** : USB CDC (`serialport`). La barre se ré-énumère à la fermeture du port ; le démon se reconnecte tout seul.
-- **Zéro écriture** sur le cluster : token **PVEAuditor** (lecture seule).
+Aucune dépendance graphique : `@napi-rs/canvas` (Skia) génère les PNG côté serveur, le démon les
+pousse sur le fil série.
 
-## Démarrage rapide (démon)
+## 🚀 Démarrage rapide (démon)
 
-Recette complète (LXC privilégié + passthrough USB + service systemd) dans
-**[`daemon/DEPLOY.md`](daemon/DEPLOY.md)**. En bref, sur le nœud Linux où la barre est branchée :
+Sur le nœud Linux où la barre est branchée (recette LXC complète + systemd :
+**[`daemon/DEPLOY.md`](daemon/DEPLOY.md)**) :
 
 ```bash
-# Node 20 + polices (un LXC minimal n'a AUCUNE police → texte invisible !)
+# 1) Node 20 + polices — un LXC minimal n'en a AUCUNE (sinon : texte invisible !)
 apt-get install -y nodejs fontconfig fonts-liberation fonts-dejavu-core fonts-noto-color-emoji
 
+# 2) Démon
 cd daemon && npm install --omit=dev
-cp socbar-daemon.config.example.json socbar-daemon.config.json   # url + token Proxmox
-node daemon.js --demo    # valide l'affichage (données fictives)
+cp socbar-daemon.config.example.json socbar-daemon.config.json   # ← url + token Proxmox
+
+# 3) Go
+node daemon.js --demo    # données fictives (valide l'affichage)
 node daemon.js           # données réelles du cluster
 ```
 
-> **Polices** : Orbitron (UI) est embarquée dans [`daemon/fonts/`](daemon/fonts/). Les emojis
-> couleur exigent `fonts-noto-color-emoji` **+** un enregistrement explicite (Skia ne prend pas
-> la police tout seul) — le démon le fait au chargement.
+Crée un token **lecture seule** : *Datacenter → Permissions → API Tokens*, rôle `PVEAuditor`.
 
-## Matériel
+## 🔬 Comment le protocole a été cassé
 
-ENIAC Flexbar — ESP32-S3, écran AMOLED tactile, retour haptique, **USB CDC série**
-(VID `0x303A` / PID `0x82BF`). Firmware d'usine conservé : on ne fait que parler son protocole.
-
-## Structure
+Capturé via un shim `serialport` posé entre FlexDesigner et la barre (**flux non chiffré**).
+Chaque dessin = une trame binaire, puis un **PNG brut** :
 
 ```
-daemon/          le démon headless (Proxmox → barre)   ← commence ici
-  DEPLOY.md      recette LXC + systemd
-  fonts/         Orbitron (OFL)
-backend/         le plugin FlexDesigner (macOS)
-PLUGIN.md        doc du plugin
-PROTOCOL.md      protocole série rétro-conçu
-assets/          captures
+MAGIC (32 o constants)  5a0000a5 a9c4d1f2 … 8c7a2d9f
+en-tête (8×uint32 LE)   [0x1000, 1, 1, 0, len, len, 0, type]   type 8 = données
+payload                 aafcfdfe + jsonLen + binLen + total + <JSON> + <binaire>
+  JSON   {"event":"$plugin-N","data":{"$cmd":"draw"}}      ← N = index de la key
+  binaire  \x89PNG … IEND                                   ← PNG RGB aux dims de la key
 ```
 
-## Polices & licence
+```mermaid
+sequenceDiagram
+  participant B as Flexbar
+  participant D as Démon
+  B->>D: handshake (fixedBar : disposition des keys)
+  loop toutes les 3 s
+    D->>B: MAGIC + header + {"$cmd":"draw"} + PNG RGB
+    Note over B: dessine la key N
+  end
+  B-->>D: {"evt":"click", key:{…}}  (tap)
+```
+
+Tout est documenté dans **[`PROTOCOL.md`](PROTOCOL.md)** ; le codec vit dans
+[`daemon/protocol.js`](daemon/protocol.js).
+
+## 🧨 Pièges durement gagnés
+
+<details>
+<summary><b>PNG RGB, pas RGBA</b> — sinon la barre affiche des rayures</summary>
+
+La barre décode le PNG en **colortype 2 (RGB)**. Un PNG RGBA (le défaut de canvas) sort en
+zébrures illisibles. `daemon/png.js` reconvertit explicitement en RGB via `pngjs`.
+</details>
+
+<details>
+<summary><b>Un LXC minimal n'a AUCUNE police</b> — texte invisible, barre « vide »</summary>
+
+`@napi-rs/canvas` dessine les fonds mais **pas le texte** → PNG ~762 o au lieu de ~7 Ko.
+Fix : `fonts-liberation fonts-dejavu-core` + `fc-cache`. Diagnostic : `fc-list | wc -l == 0`.
+</details>
+
+<details>
+<summary><b>Emojis couleur : installer la police ne suffit pas</b></summary>
+
+Skia rend des tofu tant que la police n'est pas **enregistrée explicitement** via
+`GlobalFonts.registerFromPath(...)`. La couleur des emojis est intrinsèque (ignore `fillStyle`).
+`render.js` s'en charge au chargement.
+</details>
+
+<details>
+<summary><b>La barre se ré-énumère</b> — le port disparaît à chaque (dé)connexion</summary>
+
+Fermer le port série resette l'ESP32 → nouveau `/dev/ttyACM*`. Le démon se reconnecte tout seul
+(auto-détection par VID/PID `303A:82BF`). En LXC : passthrough résilient (cf. `DEPLOY.md`).
+</details>
+
+<details>
+<summary><b>Stockage non partagé = un par nœud</b> — dédup par nom = données faussées</summary>
+
+Un `lvmthin` local existe une fois **par nœud**, avec un usage différent. Déduire par nom seul
+masquait le nœud chargé. Clé correcte : `nom` si partagé, sinon `nom@nœud` (cf. `metrics.js`).
+</details>
+
+## 🗂️ Structure
+
+```
+daemon/            ⭐ le démon headless (Proxmox → barre) — commence ici
+  DEPLOY.md          recette LXC privilégié + passthrough USB + systemd
+  render.js          widgets → PNG (emoji + Orbitron + sparklines + jauge)
+  protocol.js        codec de la trame série
+  metrics.js         alertes + agrégat disque
+  proxmox.js         client API (token lecture seule)
+  fonts/             Orbitron (OFL)
+backend/           le plugin FlexDesigner d'origine (macOS)  →  PLUGIN.md
+PROTOCOL.md        le protocole série rétro-conçu
+assets/            captures
+```
+
+## 🛣️ Roadmap
+
+- [x] Démon headless pilotant la barre sans FlexDesigner
+- [x] Cockpit Proxmox : nœuds, VMs, alertes, disque
+- [x] Emojis couleur + police Orbitron + sparklines
+- [ ] Couleur des sparklines selon le niveau (vert → orange → rouge)
+- [ ] Drill-down tactile (tap → liste des nœuds / top VMs)
+- [ ] Rotation « uptime des sites » dans une tuile
+- [ ] Initialisation autonome de la disposition des keys
+
+## 🔤 Polices & 📜 Licence
 
 - Code sous **[MIT](LICENSE)**.
-- Police UI **Orbitron** sous **SIL OFL 1.1** (embarquée, cf. [`daemon/fonts/README.md`](daemon/fonts/README.md)).
-- **Zekton** (la police d'ENIAC) est **commerciale** : non incluse. Si tu la possèdes, dépose
+- Police UI **Orbitron** sous **SIL OFL 1.1** (embarquée — [`daemon/fonts/README.md`](daemon/fonts/README.md)).
+- **Zekton** (la police d'ENIAC) est **commerciale**, donc non incluse. Si tu la possèdes, dépose
   `Zekton.ttf` dans `daemon/fonts/` et change la famille dans `render.js`.
 
-## Avertissement
+<details>
+<summary>🎨 Pourquoi Orbitron ? (le comparatif)</summary>
+
+Zekton étant introuvable/commerciale, plusieurs alternatives libres (OFL) ont été rendues **sur
+la vraie pipeline** de la barre avant de trancher :
+
+<img src="assets/fonts.png" width="640" alt="Comparatif de polices">
+</details>
+
+## ⚖️ Avertissement
 
 Projet indépendant, **non affilié à ENIAC**. Le protocole a été rétro-conçu à des fins
 d'**interopérabilité**, sur du matériel possédé, à partir d'un flux **non chiffré**. Le firmware
-d'usine n'est ni modifié ni redistribué. Fais-en un usage responsable.
+d'usine n'est ni modifié ni redistribué. Usage responsable.
+
+---
+
+<div align="center">
+<sub>Fait avec ☕ et un analyseur de trames série · <a href="PROTOCOL.md">le protocole</a> · <a href="daemon/DEPLOY.md">déployer</a></sub>
+</div>

@@ -184,6 +184,37 @@ function resourceLine (width, r) {
   return canvasToRgbPng(canvas)
 }
 
+// Ticker crypto (repli de la tuile alertes) — symbole + prix + variation 24h.
+function cryptoTile (width, c) {
+  const { canvas, ctx } = newCanvas(width)
+  const up = (c.changePct || 0) >= 0
+  const col = up ? C.ok : C.crit
+  let tx = 10
+  if (icon(ctx, '🪙', 8, 14, 13)) tx = 27
+  ctx.fillStyle = C.label; ctx.font = '600 10px ' + UIFONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+  ctx.fillText('CRYPTO' + (c.total ? '  ' + (c.index + 1) + '/' + c.total : ''), tx, 14)
+  // symbole + /USDT discret
+  ctx.fillStyle = C.text; ctx.font = '700 22px ' + UIFONT
+  ctx.fillText(c.base || '—', 10, 39)
+  const bw = ctx.measureText(c.base || '—').width
+  ctx.fillStyle = C.label; ctx.font = '600 11px ' + UIFONT
+  ctx.fillText('/USDT', 15 + bw, 41)
+  // prix (droite, haut)
+  ctx.textAlign = 'right'
+  ctx.fillStyle = C.text; ctx.font = '700 18px ' + UIFONT
+  ctx.fillText(c.priceStr || '—', width - 10, 22)
+  // variation 24h (droite, bas) + triangle vectoriel coloré
+  ctx.fillStyle = col; ctx.font = '700 15px ' + UIFONT
+  const chg = (up ? '+' : '') + (c.changePct != null ? c.changePct.toFixed(2) : '0.00') + '%'
+  ctx.fillText(chg, width - 10, 43)
+  const cw = ctx.measureText(chg).width
+  const px = width - 10 - cw - 9; const py = 43; const s = 5
+  ctx.beginPath()
+  if (up) { ctx.moveTo(px, py - s); ctx.lineTo(px - s, py + s); ctx.lineTo(px + s, py + s) } else { ctx.moveTo(px, py + s); ctx.lineTo(px - s, py - s); ctx.lineTo(px + s, py - s) }
+  ctx.closePath(); ctx.fill()
+  return canvasToRgbPng(canvas)
+}
+
 // Slot 4 — free disk + usage gauge, aggregated across the cluster. d = {free,total}.
 function diskTile (width, d) {
   const { canvas, ctx } = newCanvas(width)
@@ -205,4 +236,4 @@ function diskTile (width, d) {
   return canvasToRgbPng(canvas)
 }
 
-module.exports = { brandTile, tilesPng, clusterOverview, alertsTile, resourceLine, diskTile }
+module.exports = { brandTile, tilesPng, clusterOverview, alertsTile, resourceLine, cryptoTile, diskTile }

@@ -3,11 +3,13 @@
 // cockpit across the bar's 5 keys. Config in socbar-daemon.config.json (see .example).
 // Use --demo for synthetic data (no Proxmox needed) to validate the bar.
 //
-// Layout (5 slots): 0 brand · 1 cluster stats · 2 alerts · 3 VMs (no templates) · 4 free disk
+// Layout (5 slots): 0 brand · 1 cluster stats · 2 alerts/crypto · 3 VMs (no templates) · 4 free disk
+// Slot 2 est « intelligent » : alertes s'il y en a, sinon rotation des tickers crypto.
 
 const { Flexbar } = require('./flexbar.js')
-const { brandTile, clusterOverview, alertsTile, resourceLine, diskTile } = require('./render.js')
+const { brandTile, clusterOverview, alertsTile, resourceLine, cryptoTile, diskTile } = require('./render.js')
 const { computeAlerts, clusterDisk } = require('./metrics.js')
+const { fetchCrypto, getCached } = require('./crypto.js')
 const { load } = require('./config.js')
 
 const cfg = load()
@@ -23,6 +25,9 @@ const S = {
   vms: { i: sl.vms != null ? sl.vms : 3, w: sl.vmsW || 500 },
   disk: { i: sl.disk != null ? sl.disk : 4, w: sl.diskW || 460 }
 }
+// Tickers crypto (repli de la tuile alertes). enabled par défaut ; symboles dans crypto.symbols.
+const cryptoOn = !cfg.crypto || cfg.crypto.enabled !== false
+const cryptoMs = (cfg.crypto && cfg.crypto.refreshMs) || 45000
 
 function demoCluster (t) {
   const j = (b, a) => Math.max(0, Math.min(1, b + a * Math.sin(t / 3) + (Math.random() * a - a / 2)))
@@ -90,7 +95,14 @@ async function paint () {
 
     bar.draw(S.brand.i, brandTile(S.brand.w))
     bar.draw(S.overview.i, clusterOverview(S.overview.w, { nodes: cl.nodes, vms: realVms }, { cpu: histCpu, ram: histRam }))
-    bar.draw(S.alerts.i, alertsTile(S.alerts.w, alerts, rotIdx))
+    // Slot 2 : alertes prioritaires, sinon rotation des tickers crypto.
+    const coins = cryptoOn ? getCached() : []
+    if (alerts.length || !coins.length) {
+      bar.draw(S.alerts.i, alertsTile(S.alerts.w, alerts, rotIdx))
+    } else {
+      const coin = coins[rotIdx % coins.length]
+      bar.draw(S.alerts.i, cryptoTile(S.alerts.w, { ...coin, index: rotIdx % coins.length, total: coins.length }))
+    }
     if (realVms.length) {
       const vm = realVms[rotIdx % realVms.length]
       bar.draw(S.vms.i, resourceLine(S.vms.w, {
@@ -106,8 +118,19 @@ async function paint () {
   }
 }
 
+// Tickers crypto : fetch lent, indépendant du dessin (remplit le cache lu par paint()).
+let cryptoIv = null
+if (cryptoOn) {
+  const pullCrypto = () => fetchCrypto()
+    .then((c) => { if (!getCached().length) console.log('[crypto] ' + c.length + ' tickers') })
+    .catch((e) => console.log('[crypto]', e.message))
+  pullCrypto()
+  cryptoIv = setInterval(pullCrypto, cryptoMs)
+}
+
 bar.run()
 const iv = setInterval(() => { if (bar.ready) paint().catch((e) => console.log('[loop]', e.message)) }, refreshMs)
-process.on('SIGINT', () => { clearInterval(iv); process.exit(0) })
+process.on('SIGINT', () => { clearInterval(iv); if (cryptoIv) clearInterval(cryptoIv); process.exit(0) })
 console.log('[daemon] démarrage' + (DEMO ? ' (démo)' : '') +
-  ` — refresh ${refreshMs}ms, slots brand=${S.brand.i} stats=${S.overview.i} alertes=${S.alerts.i} vms=${S.vms.i} disk=${S.disk.i}`)
+  ` — refresh ${refreshMs}ms, slots brand=${S.brand.i} stats=${S.overview.i} alertes/crypto=${S.alerts.i} vms=${S.vms.i} disk=${S.disk.i}` +
+  (cryptoOn ? ` — crypto ON (${cryptoMs}ms)` : ''))

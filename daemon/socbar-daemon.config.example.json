@@ -9,5 +9,11 @@
   "refreshMs": 3000,
   "detailRotateMs": 3000,
   "_comment_slots": "Position de chaque widget sur la barre (index de key) — dépend de ta disposition. Largeurs surchargeables via brandW/overviewW/alertsW/vmsW/diskW.",
-  "slots": { "brand": 0, "overview": 1, "alerts": 2, "vms": 3, "disk": 4 }
+  "slots": { "brand": 0, "overview": 1, "alerts": 2, "vms": 3, "disk": 4 },
+  "_comment_crypto": "Tickers crypto affichés sur le slot alertes quand aucune alerte (rotation). enabled:false pour couper. symbols = paires exchange (défaut : BTC/ETH/DOGE/DOT/LINK/SOL/VET en USDT).",
+  "crypto": {
+    "enabled": true,
+    "symbols": ["BTCUSDT", "ETHUSDT", "DOGEUSDT", "DOTUSDT", "LINKUSDT", "SOLUSDT", "VETUSDT"],
+    "refreshMs": 45000
+  }
 }

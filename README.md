@@ -41,6 +41,7 @@ graphique**.
 | 🚨 **Alertes auto** | nœud HS + stockage ≥ 80 % / ≥ 90 %, dérivées de l'état réel |
 | 🐧 **Rotation VMs** | LXC/QEMU, **templates exclus**, CPU/RAM par invité |
 | 💾 **Disque cluster** | espace libre **agrégé** + jauge d'utilisation |
+| 🪙 **Tickers crypto** | prix + variation 24h (Binance), en rotation quand aucune alerte |
 | 🎨 **Style** | emojis couleur · police [Orbitron](https://fonts.google.com/specimen/Orbitron) · code couleur par seuil |
 | 🔌 **Résilient** | reconnexion auto (la barre se ré-énumère au boot) |
 | 🔒 **Lecture seule** | token PVEAuditor — aucune action possible sur le cluster |
@@ -53,9 +54,21 @@ De haut en bas sur l'image = de gauche à droite sur la barre (5 keys) :
 |---|-------|---------|
 | 0 | 🛡 **Marque** | logo / wordmark |
 | 1 | 🖥 **Stats** | `NODES` · `VMS` · `CPU` (+ sparkline) · `RAM` (+ sparkline) |
-| 2 | 🚨 **Alertes** | worst-of du cluster, rotation, ou ✅ **OK** |
+| 2 | 🚨 **Alertes / 🪙 Crypto** | alertes s'il y en a, **sinon** rotation des tickers crypto |
 | 3 | 🐧 **VMs** | rotation sur les invités, nom + CPU/RAM % (ou *stoppé*) |
 | 4 | 💾 **Disque** | `X To libre` + jauge d'utilisation |
+
+## 🪙 Tickers crypto
+
+Le slot **Alertes** est « intelligent » : il affiche les alertes cluster s'il y en a, et **sinon
+fait défiler des tickers crypto** (prix + variation 24h via l'API publique Binance, sans clé).
+La tuile — quasi toujours « OK » sur un cluster sain — devient utile, tout en cédant la place aux
+alertes dès qu'un incident survient.
+
+<img src="assets/crypto.png" width="440" alt="Tickers crypto : symbole, prix, variation 24h">
+
+Paires configurables dans `crypto.symbols` (défaut : BTC · ETH · DOGE · DOT · LINK · SOL · VET, en
+USDT) ; `crypto.enabled:false` pour couper. Cf. [`daemon/socbar-daemon.config.example.json`](daemon/socbar-daemon.config.example.json).
 
 ## 🏗️ Architecture
 
@@ -181,6 +194,7 @@ assets/            captures
 - [x] Démon headless pilotant la barre sans FlexDesigner
 - [x] Cockpit Proxmox : nœuds, VMs, alertes, disque
 - [x] Emojis couleur + police Orbitron + sparklines
+- [x] Tickers crypto (BTC · ETH · DOGE · DOT · LINK · SOL · VET) sur le slot alertes intelligent
 - [ ] Couleur des sparklines selon le niveau (vert → orange → rouge)
 - [ ] Drill-down tactile (tap → liste des nœuds / top VMs)
 - [ ] Rotation « uptime des sites » dans une tuile

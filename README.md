@@ -70,6 +70,32 @@ alertes dès qu'un incident survient.
 Paires configurables dans `crypto.symbols` (défaut : BTC · ETH · DOGE · DOT · LINK · SOL · VET, en
 USDT) ; `crypto.enabled:false` pour couper. Cf. [`daemon/socbar-daemon.config.example.json`](daemon/socbar-daemon.config.example.json).
 
+## 🥷 Mode « nœud d'attaque » (NixOS)
+
+Quand la barre n'est plus sur un cluster Proxmox mais sur un **nœud de pentest NixOS**, lance
+`daemon-atk.js` au lieu de `daemon.js` : la barre devient une **console opérateur**.
+
+<img src="assets/atk.png" width="700" alt="Console nœud d'attaque : scope, vitals, egress/VPN, mission/tunnels, crypto">
+
+| # | Tuile | Contenu |
+|---|-------|---------|
+| 0 | 🎯 **Scope** | garde-fou de périmètre : **ARMÉ** (vert) / **LIBRE** (rouge) |
+| 1 | 🖥 **Vitals** | CPU/RAM (+ sparklines) · LOAD · TEMP de l'hôte |
+| 2 | 🌐 **Egress** | IP publique de sortie + ✅ **VPN** / ⚠ **LEAK** (kill-switch visuel) |
+| 3 | 📟 **Mission** | mission courante + WireGuard · sessions C2 · listeners |
+| 4 | 🪙 **Crypto** | le ruban (inchangé) |
+
+```bash
+node daemon-atk.js --demo    # maquette (données fictives)
+node daemon-atk.js           # données réelles du nœud
+```
+
+Collecteurs **pilotés par config** ([`daemon/socbar-daemon.config.atk.example.json`](daemon/socbar-daemon.config.atk.example.json)) :
+egress = interface de route par défaut comparée à `wg0` ; scope = fichier de mission ou set `nft` ;
+sessions = `wg show` + `ss`. Déploiement NixOS = module systemd
+[`nixos/flexbar-cockpit.nix`](nixos/flexbar-cockpit.nix) (polices + `nix-ld` pour les binaires
+natifs + accès série).
+
 ## 🏗️ Architecture
 
 ```mermaid
@@ -195,6 +221,7 @@ assets/            captures
 - [x] Cockpit Proxmox : nœuds, VMs, alertes, disque
 - [x] Emojis couleur + police Orbitron + sparklines
 - [x] Tickers crypto (BTC · ETH · DOGE · DOT · LINK · SOL · VET) sur le slot alertes intelligent
+- [x] Mode « nœud d'attaque » NixOS (scope · egress/VPN · vitals hôte · mission/tunnels)
 - [ ] Couleur des sparklines selon le niveau (vert → orange → rouge)
 - [ ] Drill-down tactile (tap → liste des nœuds / top VMs)
 - [ ] Rotation « uptime des sites » dans une tuile

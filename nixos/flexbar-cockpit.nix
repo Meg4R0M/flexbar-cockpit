@@ -1,0 +1,99 @@
+# Module NixOS pour la console Flexbar « nœud d'attaque ».
+#
+# Importe-le dans ta configuration et active :
+#
+#   imports = [ ./flexbar-cockpit/nixos/flexbar-cockpit.nix ];
+#   services.flexbar-cockpit = {
+#     enable = true;
+#     src = ./flexbar-cockpit/daemon;                 # le dossier daemon/ du dépôt
+#     configFile = "/etc/flexbar/socbar-daemon.config.json";
+#     device = "/dev/ttyACM0";
+#   };
+#
+# Les modules natifs prébuild (@napi-rs/canvas / serialport) tournent via nix-ld ; les
+# dépendances npm sont installées au premier démarrage dans le StateDirectory (impur mais
+# simple). Pour du 100 % pur, remplace le preStart par un pkgs.buildNpmPackage (calcule
+# npmDepsHash sur le nœud) — l'ExecStart reste identique.
+
+{ config, lib, pkgs, ... }:
+
+let
+  cfg = config.services.flexbar-cockpit;
+in {
+  options.services.flexbar-cockpit = {
+    enable = lib.mkEnableOption "Console Flexbar (nœud d'attaque)";
+    src = lib.mkOption {
+      type = lib.types.path;
+      description = "Chemin du dossier daemon/ (contient daemon-atk.js, package.json, fonts/).";
+    };
+    configFile = lib.mkOption {
+      type = lib.types.str;
+      default = "/etc/flexbar/socbar-daemon.config.json";
+      description = "Chemin du fichier de config (voir socbar-daemon.config.atk.example.json).";
+    };
+    device = lib.mkOption {
+      type = lib.types.str;
+      default = "/dev/ttyACM0";
+      description = "Port série de la Flexbar.";
+    };
+    nodejs = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.nodejs_20;
+      description = "Paquet Node.js utilisé.";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    # Polices requises par le rendu : Liberation (compatibles Arial) + emoji couleur.
+    # (Orbitron est embarquée dans daemon/fonts/ et enregistrée par render.js.)
+    fonts.packages = with pkgs; [ liberation_ttf noto-fonts-color-emoji ];
+    fonts.fontconfig.enable = true;
+
+    # nix-ld : permet d'exécuter les .node prébuild (générique Linux) sur NixOS.
+    programs.nix-ld.enable = true;
+    programs.nix-ld.libraries = with pkgs; [
+      stdenv.cc.cc.lib  # libstdc++ / libgcc_s
+      fontconfig.lib
+      freetype
+      zlib
+    ];
+
+    systemd.services.flexbar-cockpit = {
+      description = "Console Flexbar (nœud d'attaque)";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      # Outils lus par les collecteurs (egress/scope/sessions) + build.
+      path = with pkgs; [ cfg.nodejs iproute2 wireguard-tools nftables coreutils gnugrep ];
+      environment = {
+        SOCBAR_CONFIG = cfg.configFile;
+        # fontconfig système (pour que canvas trouve Liberation + Noto emoji)
+        FONTCONFIG_FILE = "/etc/fonts/fonts.conf";
+      };
+      serviceConfig = {
+        Type = "simple";
+        # Service root : nft/wg/ss et l'accès série le nécessitent sur un nœud d'attaque.
+        User = "root";
+        StateDirectory = "flexbar-cockpit";
+        WorkingDirectory = "/var/lib/flexbar-cockpit";
+        Restart = "always";
+        RestartSec = 5;
+        # Copie la source (lecture seule dans le store) vers le state dir, puis installe
+        # les deps si le marqueur a changé.
+        ExecStartPre = pkgs.writeShellScript "flexbar-cockpit-setup" ''
+          set -eu
+          dst=/var/lib/flexbar-cockpit
+          ${pkgs.coreutils}/bin/cp -rT --no-preserve=mode ${cfg.src} "$dst"
+          cd "$dst"
+          if [ ! -d node_modules ] || [ package.json -nt node_modules/.stamp ]; then
+            ${cfg.nodejs}/bin/npm install --omit=dev --no-audit --no-fund
+            : > node_modules/.stamp
+          fi
+        '';
+        ExecStart = "${cfg.nodejs}/bin/node /var/lib/flexbar-cockpit/daemon-atk.js";
+        # Accès au port série de la barre.
+        DeviceAllow = [ "${cfg.device} rw" ];
+      };
+    };
+  };
+}

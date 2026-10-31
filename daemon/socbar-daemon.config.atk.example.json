@@ -1,0 +1,37 @@
+{
+  "_comment": "Config du mode « nœud d'attaque » (daemon-atk.js). Copie en socbar-daemon.config.json sur le nœud. Tout est optionnel : des défauts raisonnables s'appliquent.",
+  "serialPath": "/dev/ttyACM0",
+  "refreshMs": 3000,
+  "detailRotateMs": 3000,
+
+  "node": {
+    "_comment": "tempZone : fichier sysfs de température CPU (adapter selon la carte).",
+    "tempZone": "/sys/class/thermal/thermal_zone0/temp"
+  },
+
+  "egress": {
+    "_comment": "OK (✅ VPN) si la route par défaut sort par vpnInterface ; sinon ⚠ LEAK. probeUrl = echo-IP publique (false pour désactiver si bloqué par le pare-feu).",
+    "vpnInterface": "wg0",
+    "probeUrl": "https://api.ipify.org",
+    "refreshMs": 30000
+  },
+
+  "scope": {
+    "_comment": "missionFile : fichier contenant le nom de la mission. armed : par défaut = mission chargée. Pour refléter le vrai garde-fou, renseigne nftSet (ex: 'inet hx hx-scope') ou armedCmd (stdout non vide = armé).",
+    "missionFile": "/run/hx/mission",
+    "nftSet": null,
+    "armedCmd": null
+  },
+
+  "sessions": {
+    "_comment": "listenCmd : liste des sockets en écoute (défaut ss). c2Cmd : commande imprimant le nombre de sessions C2 (ex. API Sliver/Havoc) — laisse null si pas de C2.",
+    "listenCmd": "ss -H -tln 2>/dev/null",
+    "c2Cmd": null
+  },
+
+  "crypto": {
+    "enabled": true,
+    "symbols": ["BTCUSDT", "ETHUSDT", "DOGEUSDT", "DOTUSDT", "LINKUSDT", "SOLUSDT", "VETUSDT"],
+    "refreshMs": 45000
+  }
+}

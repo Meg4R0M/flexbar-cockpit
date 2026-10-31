@@ -236,4 +236,72 @@ function diskTile (width, d) {
   return canvasToRgbPng(canvas)
 }
 
-module.exports = { brandTile, tilesPng, clusterOverview, alertsTile, resourceLine, cryptoTile, diskTile }
+// ===== Console nœud d'attaque (NixOS) =====
+
+// Vitals de l'hôte local — CPU/RAM/LOAD/TEMP. h={cpu,ram:0..1, load, cores, temp}, hist={cpu,ram}.
+function hostOverview (width, h, hist) {
+  const cpu = Math.round(100 * (h.cpu || 0))
+  const ram = Math.round(100 * (h.ram || 0))
+  const cores = h.cores || 8
+  return tilesPng(width, [
+    { icon: '🖥', label: 'CPU', value: cpu + '%', level: band(cpu, 70, 90), spark: hist && hist.cpu },
+    { icon: '🧠', label: 'RAM', value: ram + '%', level: band(ram, 75, 92), spark: hist && hist.ram },
+    { icon: '📊', label: 'LOAD', value: h.load != null ? h.load.toFixed(2) : '—', level: band(h.load || 0, cores, cores * 1.5) },
+    { icon: '🌡', label: 'TEMP', value: h.temp != null ? Math.round(h.temp) + '°' : '—', level: band(h.temp || 0, 70, 85) }
+  ])
+}
+
+// Egress — IP publique de sortie + VPN/LEAK. e={ip, via, ok}.
+function egressTile (width, e) {
+  const { canvas, ctx } = newCanvas(width)
+  const ok = !!e.ok
+  const col = ok ? C.ok : C.crit
+  labelWith(ctx, 0, '🌐', col, 'EGRESS' + (e.via ? ' ' + String(e.via).toUpperCase() : ''))
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+  const f = fit(ctx, e.ip || '—', width - 130, 20)
+  ctx.fillStyle = C.text; ctx.font = '700 ' + f.px + 'px ' + UIFONT
+  ctx.fillText(f.text, 12, 40)
+  ctx.textAlign = 'right'
+  const stxt = ok ? 'VPN' : 'LEAK'
+  ctx.fillStyle = col; ctx.font = '700 15px ' + UIFONT
+  ctx.fillText(stxt, width - 12, 40)
+  const sw = ctx.measureText(stxt).width
+  icon(ctx, ok ? '✅' : '⚠️', width - 12 - sw - 22, 40, 15)
+  return canvasToRgbPng(canvas)
+}
+
+// Garde-fou de périmètre — compact (slot étroit). s={armed, mission}.
+function scopeTile (width, s) {
+  const { canvas, ctx } = newCanvas(width)
+  const armed = !!s.armed
+  const col = armed ? C.ok : C.crit
+  ctx.fillStyle = col; ctx.fillRect(0, 0, width, 3)
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+  const hasIcon = icon(ctx, '🎯', width / 2 - 9, 21, 18)
+  ctx.fillStyle = col
+  const f = fit(ctx, armed ? 'ARMÉ' : 'LIBRE', width - 8, hasIcon ? 16 : 20)
+  ctx.font = '700 ' + f.px + 'px ' + UIFONT
+  ctx.fillText(f.text, width / 2, hasIcon ? 45 : 32)
+  return canvasToRgbPng(canvas)
+}
+
+// Mission + tunnels. s={mission, wg, c2, listeners}.
+function sessionsTile (width, s) {
+  const { canvas, ctx } = newCanvas(width)
+  const wgOk = !!s.wg
+  let tx = 10
+  if (icon(ctx, '📟', 8, 14, 13)) tx = 27
+  ctx.fillStyle = C.label; ctx.font = '600 10px ' + UIFONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+  ctx.fillText('MISSION', tx, 14)
+  const f = fit(ctx, s.mission || '— aucune —', width - 155, 18)
+  ctx.fillStyle = s.mission ? C.text : C.idle; ctx.font = '700 ' + f.px + 'px ' + UIFONT
+  ctx.fillText(f.text, 10, 39)
+  ctx.textAlign = 'right'
+  ctx.fillStyle = wgOk ? C.ok : C.idle; ctx.font = '700 15px ' + UIFONT
+  ctx.fillText(wgOk ? 'WG UP' : 'WG —', width - 10, 22)
+  ctx.fillStyle = (s.c2 ? C.accent : C.idle)
+  ctx.fillText('C2 ' + (s.c2 || 0) + '  ·  LISTEN ' + (s.listeners || 0), width - 10, 42)
+  return canvasToRgbPng(canvas)
+}
+
+module.exports = { brandTile, tilesPng, clusterOverview, alertsTile, resourceLine, cryptoTile, diskTile, hostOverview, egressTile, scopeTile, sessionsTile }

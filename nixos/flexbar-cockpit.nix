@@ -53,7 +53,7 @@ in {
     # Polices requises par le rendu : Liberation (compatibles Arial) + emoji couleur.
     # (Orbitron est embarquée dans daemon/fonts/ et enregistrée par render.js.)
     fonts.packages = with pkgs; [ liberation_ttf noto-fonts-color-emoji ];
-    fonts.fontconfig.enable = true;
+    fonts.fontconfig.enable = lib.mkDefault true;
 
     # Config déclarative (si fournie) écrite en JSON dans /etc (non secret).
     environment.etc = lib.mkIf (cfg.settings != null) {
@@ -61,7 +61,7 @@ in {
     };
 
     # nix-ld : permet d'exécuter les .node prébuild (générique Linux) sur NixOS.
-    programs.nix-ld.enable = true;
+    programs.nix-ld.enable = lib.mkDefault true;
     programs.nix-ld.libraries = with pkgs; [
       stdenv.cc.cc.lib  # libstdc++ / libgcc_s
       fontconfig.lib

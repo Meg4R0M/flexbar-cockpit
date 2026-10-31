@@ -251,6 +251,21 @@ function hostOverview (width, h, hist) {
   ])
 }
 
+// Slot 1 (vue multi-nœuds) — CPU/RAM de chaque nœud, côte à côte. Un nœud hors ligne
+// s'affiche en « — » (gris). nodes=[{nom, cpu, ram:0..1, online}], hist={nom:{cpu,ram}}.
+function nodesOverview (width, nodes, hist) {
+  const tiles = []
+  for (const n of nodes || []) {
+    const up = n.online !== false
+    const cpu = Math.round(100 * (n.cpu || 0))
+    const ram = Math.round(100 * (n.ram || 0))
+    const h = (hist && hist[n.nom]) || {}
+    tiles.push({ icon: '🖥', label: n.nom + ' CPU', value: up ? cpu + '%' : '—', level: up ? band(cpu, 70, 90) : 'idle', spark: up ? h.cpu : null })
+    tiles.push({ icon: '🧠', label: n.nom + ' RAM', value: up ? ram + '%' : '—', level: up ? band(ram, 75, 92) : 'idle', spark: up ? h.ram : null })
+  }
+  return tilesPng(width, tiles.length ? tiles : [{ label: 'NODES', value: '—', level: 'idle' }])
+}
+
 // Egress — IP publique de sortie + état tunnel. e={ip, via, state:'vpn'|'leak'|'lan'}.
 //  vpn = sortie par le tunnel (vert) · leak = hors tunnel alors qu'une mission est ARMÉE
 //  (rouge) · lan = sortie LAN sans mission (neutre, pas d'alarme).
@@ -306,4 +321,4 @@ function sessionsTile (width, s) {
   return canvasToRgbPng(canvas)
 }
 
-module.exports = { brandTile, tilesPng, clusterOverview, alertsTile, resourceLine, cryptoTile, diskTile, hostOverview, egressTile, scopeTile, sessionsTile }
+module.exports = { brandTile, tilesPng, clusterOverview, alertsTile, resourceLine, cryptoTile, diskTile, hostOverview, nodesOverview, egressTile, scopeTile, sessionsTile }

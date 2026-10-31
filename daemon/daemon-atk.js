@@ -4,7 +4,7 @@
 // --demo = données fictives (pas besoin du nœud). Config : socbar-daemon.config.json.
 
 const { Flexbar } = require('./flexbar.js')
-const { scopeTile, hostOverview, egressTile, sessionsTile, cryptoTile } = require('./render.js')
+const { scopeTile, nodesOverview, egressTile, sessionsTile, cryptoTile } = require('./render.js')
 const atk = require('./atk.js')
 const { fetchCrypto, getCached: cryptoCached } = require('./crypto.js')
 const { load } = require('./config.js')
@@ -26,18 +26,28 @@ const cryptoMs = (cfg.crypto && cfg.crypto.refreshMs) || 45000
 const egressMs = (cfg.egress && cfg.egress.refreshMs) || 30000
 
 const HIST = 40
-const histCpu = []
-const histRam = []
-let hostC = { cpu: 0, ram: 0, load: 0, cores: 8, temp: null }
+const localNom = (cfg.node && cfg.node.nom) || 'atk1'
+let nodesC = [{ nom: localNom, cpu: 0, ram: 0, online: true }] // [local, ...pairs]
+const histByNode = {} // { nom: { cpu: [0..1], ram: [0..1] } }
 let egressC = { ip: null, via: null, ok: false }
 let scopeC = { armed: false, mission: null }
 let sessC = { wg: false, c2: 0, listeners: 0 }
 let rotIdx = 0
 let lastRot = 0
 
+function pushHist (nom, cpu, ram) {
+  const h = histByNode[nom] || (histByNode[nom] = { cpu: [], ram: [] })
+  h.cpu.push(cpu || 0); if (h.cpu.length > HIST) h.cpu.shift()
+  h.ram.push(ram || 0); if (h.ram.length > HIST) h.ram.shift()
+}
+
 function demo () {
   const t = Date.now() / 1000
-  hostC = { cpu: Math.max(0, 0.32 + 0.18 * Math.sin(t / 4)), ram: 0.52 + 0.05 * Math.sin(t / 7), load: 3.1, cores: 16, temp: 61 }
+  nodesC = [
+    { nom: 'atk1', cpu: Math.max(0, 0.32 + 0.18 * Math.sin(t / 4)), ram: 0.52 + 0.05 * Math.sin(t / 7), online: true },
+    { nom: 'atk2', cpu: Math.max(0, 0.21 + 0.12 * Math.sin(t / 5)), ram: 0.44 + 0.05 * Math.cos(t / 6), online: true }
+  ]
+  nodesC.forEach((n) => pushHist(n.nom, n.cpu, n.ram))
   egressC = { ip: '185.220.101.47', via: 'wg0', ok: true }
   scopeC = { armed: true, mission: 'acme-redteam' }
   sessC = { wg: true, c2: 3, listeners: 2 }
@@ -52,10 +62,10 @@ const bar = new Flexbar({
 // Poll rapide (cheap) : vitals + scope + sessions.
 function pollFast () {
   try {
-    if (DEMO) demo()
-    else { hostC = atk.host(); sessC = atk.sessions() }
-    histCpu.push(hostC.cpu || 0); if (histCpu.length > HIST) histCpu.shift()
-    histRam.push(hostC.ram || 0); if (histRam.length > HIST) histRam.shift()
+    if (DEMO) { demo(); return }
+    const h = atk.host(); sessC = atk.sessions()
+    nodesC[0] = { nom: localNom, cpu: h.cpu, ram: h.ram, online: true }
+    pushHist(localNom, h.cpu, h.ram)
   } catch (e) { console.log('[poll]', e.message) }
 }
 // Poll lent : egress (requête HTTP pour l'IP publique).
@@ -68,11 +78,19 @@ function pollScope () {
   if (DEMO) return
   atk.scope().then((s) => { scopeC = s }).catch((e) => console.log('[scope]', e.message))
 }
+// Poll moyen : vitals des nœuds pairs (node_exporter :9100, lecture seule).
+function pollPeers () {
+  if (DEMO) return
+  atk.peers().then((ps) => {
+    nodesC = [nodesC[0], ...ps]
+    ps.forEach((p) => pushHist(p.nom, p.cpu, p.ram))
+  }).catch((e) => console.log('[peers]', e.message))
+}
 
 function paint () {
   try {
     bar.draw(S.scope.i, scopeTile(S.scope.w, scopeC))
-    bar.draw(S.host.i, hostOverview(S.host.w, hostC, { cpu: histCpu, ram: histRam }))
+    bar.draw(S.host.i, nodesOverview(S.host.w, nodesC, histByNode))
     // État egress : tunnel ? sinon LEAK si une mission est armée, sinon LAN (neutre).
     const vpnIf = (cfg.egress && cfg.egress.vpnInterface) || null
     const tun = egressC.via && /^(wg|tun|tailscale|nebula|proton|mullvad|zt)/i.test(egressC.via)
@@ -93,6 +111,7 @@ setInterval(pollFast, Math.min(refreshMs, 3000))
 if (!DEMO) {
   pollEgress(); setInterval(pollEgress, egressMs)
   pollScope(); setInterval(pollScope, (cfg.scope && cfg.scope.refreshMs) || 15000)
+  pollPeers(); setInterval(pollPeers, (cfg.node && cfg.node.refreshMs) || 5000)
 }
 if (cryptoOn) { const pc = () => fetchCrypto().catch((e) => console.log('[crypto]', e.message)); pc(); setInterval(pc, cryptoMs) }
 

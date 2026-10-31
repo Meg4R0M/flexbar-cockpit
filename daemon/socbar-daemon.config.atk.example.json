@@ -5,8 +5,11 @@
   "detailRotateMs": 3000,
 
   "node": {
-    "_comment": "tempZone : fichier sysfs de température CPU (adapter selon la carte).",
-    "tempZone": "/sys/class/thermal/thermal_zone0/temp"
+    "_comment": "tempZone : fichier sysfs de température CPU. nom : nom court du nœud local (affiché). pairs : autres nœuds dont on affiche aussi CPU/RAM, lus par LEUR node_exporter (:9100, à ouvrir au nœud côté hx-platform via hx.observabilite.scrapeursPairs). refreshMs : période de scrape des pairs.",
+    "tempZone": "/sys/class/thermal/thermal_zone0/temp",
+    "nom": "atk1",
+    "pairs": [ { "nom": "atk2", "url": "http://192.168.1.31:9100/metrics" } ],
+    "refreshMs": 5000
   },
 
   "egress": {

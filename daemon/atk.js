@@ -150,4 +150,59 @@ function sessions () {
 }
 function sessionsCached () { return sessC }
 
-module.exports = { host, egress, egressCached, scope, scopeCached, sessions, sessionsCached }
+// ---------- Vitals des nœuds pairs (node_exporter :9100, lecture seule) ----------
+// cfg.node { nom, pairs:[{nom,url}], refreshMs }. Chaque pair expose node_exporter
+// (ouvert au nœud via hx.observabilite.scrapeursPairs). On en tire CPU% (delta du
+// compteur idle/total) et RAM% (MemAvailable/MemTotal). Jamais d'exception : un pair
+// injoignable est renvoyé `online:false`.
+function fetchText (url, ms) {
+  return new Promise((resolve) => {
+    try {
+      const u = new URL(url)
+      const lib = u.protocol === 'http:' ? require('http') : https
+      const req = lib.get({ hostname: u.hostname, port: u.port || undefined, path: u.pathname + u.search, timeout: ms || 4000 }, (r) => {
+        if (r.statusCode !== 200) { r.resume(); return resolve(null) }
+        let d = ''; r.on('data', (c) => { d += c }); r.on('end', () => resolve(d))
+      })
+      req.on('error', () => resolve(null)); req.on('timeout', () => { req.destroy(); resolve(null) })
+    } catch (_) { resolve(null) }
+  })
+}
+
+function parseNodeExporter (txt) {
+  let idle = 0; let total = 0; let memTot = 0; let memAvail = 0
+  for (const line of String(txt || '').split('\n')) {
+    if (line.startsWith('node_cpu_seconds_total{')) {
+      const v = +line.slice(line.lastIndexOf(' ') + 1)
+      if (!Number.isFinite(v)) continue
+      total += v
+      if (line.includes('mode="idle"')) idle += v
+    } else if (line.startsWith('node_memory_MemTotal_bytes ')) {
+      memTot = +line.slice(line.indexOf(' ') + 1)
+    } else if (line.startsWith('node_memory_MemAvailable_bytes ')) {
+      memAvail = +line.slice(line.indexOf(' ') + 1)
+    }
+  }
+  return { idle, total, memTot, memAvail }
+}
+
+const prevPeer = {}
+async function peers () {
+  const list = (cfg().node && cfg().node.pairs) || []
+  const res = []
+  for (const p of list) {
+    const nom = p.nom || '?'
+    const txt = p.url ? await fetchText(p.url, 4000) : null
+    if (!txt) { res.push({ nom, cpu: 0, ram: 0, online: false }); continue }
+    const m = parseNodeExporter(txt)
+    let cpu = 0
+    const prev = prevPeer[nom]
+    if (prev && m.total > prev.total) cpu = Math.max(0, Math.min(1, 1 - (m.idle - prev.idle) / (m.total - prev.total)))
+    prevPeer[nom] = { idle: m.idle, total: m.total }
+    const ram = m.memTot ? Math.max(0, Math.min(1, 1 - m.memAvail / m.memTot)) : 0
+    res.push({ nom, cpu, ram, online: true })
+  }
+  return res
+}
+
+module.exports = { host, egress, egressCached, scope, scopeCached, sessions, sessionsCached, peers, parseNodeExporter }

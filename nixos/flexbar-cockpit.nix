@@ -19,6 +19,7 @@
 
 let
   cfg = config.services.flexbar-cockpit;
+  configPath = if cfg.settings != null then "/etc/flexbar/socbar-daemon.config.json" else cfg.configFile;
 in {
   options.services.flexbar-cockpit = {
     enable = lib.mkEnableOption "Console Flexbar (nœud d'attaque)";
@@ -29,7 +30,12 @@ in {
     configFile = lib.mkOption {
       type = lib.types.str;
       default = "/etc/flexbar/socbar-daemon.config.json";
-      description = "Chemin du fichier de config (voir socbar-daemon.config.atk.example.json).";
+      description = "Chemin du fichier de config (voir socbar-daemon.config.atk.example.json). Utilisé si `settings` est null (ex. secret rendu par sops/agenix).";
+    };
+    settings = lib.mkOption {
+      type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
+      default = null;
+      description = "Config écrite DÉCLARATIVEMENT en JSON dans /etc. Prime sur configFile. NE PAS y mettre de secret (store Nix lisible) — pour scope.apiKey, passer par sops/agenix + configFile.";
     };
     device = lib.mkOption {
       type = lib.types.str;
@@ -49,6 +55,11 @@ in {
     fonts.packages = with pkgs; [ liberation_ttf noto-fonts-color-emoji ];
     fonts.fontconfig.enable = true;
 
+    # Config déclarative (si fournie) écrite en JSON dans /etc (non secret).
+    environment.etc = lib.mkIf (cfg.settings != null) {
+      "flexbar/socbar-daemon.config.json".text = builtins.toJSON cfg.settings;
+    };
+
     # nix-ld : permet d'exécuter les .node prébuild (générique Linux) sur NixOS.
     programs.nix-ld.enable = true;
     programs.nix-ld.libraries = with pkgs; [
@@ -66,7 +77,7 @@ in {
       # Outils lus par les collecteurs (egress/scope/sessions) + build.
       path = with pkgs; [ cfg.nodejs iproute2 wireguard-tools nftables coreutils gnugrep ];
       environment = {
-        SOCBAR_CONFIG = cfg.configFile;
+        SOCBAR_CONFIG = configPath;
         # fontconfig système (pour que canvas trouve Liberation + Noto emoji)
         FONTCONFIG_FILE = "/etc/fonts/fonts.conf";
       };

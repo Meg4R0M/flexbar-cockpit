@@ -24,8 +24,8 @@ in {
   options.services.flexbar-cockpit = {
     enable = lib.mkEnableOption "Console Flexbar (nœud d'attaque)";
     src = lib.mkOption {
-      type = lib.types.path;
-      description = "Chemin du dossier daemon/ (contient daemon-atk.js, package.json, fonts/).";
+      type = lib.types.either lib.types.path lib.types.str;
+      description = "Chemin du dossier daemon/ (contient daemon-atk.js, package.json, fonts/). Accepte un chemin de store, ex. \"\${inputs.flexbar-cockpit}/daemon\".";
     };
     configFile = lib.mkOption {
       type = lib.types.str;

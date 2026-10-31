@@ -53,15 +53,20 @@ const bar = new Flexbar({
 function pollFast () {
   try {
     if (DEMO) demo()
-    else { hostC = atk.host(); scopeC = atk.scope(); sessC = atk.sessions() }
+    else { hostC = atk.host(); sessC = atk.sessions() }
     histCpu.push(hostC.cpu || 0); if (histCpu.length > HIST) histCpu.shift()
     histRam.push(hostC.ram || 0); if (histRam.length > HIST) histRam.shift()
   } catch (e) { console.log('[poll]', e.message) }
 }
-// Poll lent : egress (fait une requête HTTP pour l'IP publique).
+// Poll lent : egress (requête HTTP pour l'IP publique).
 function pollEgress () {
   if (DEMO) return
   atk.egress().then((e) => { egressC = e }).catch((e) => console.log('[egress]', e.message))
+}
+// Poll moyen : scope/mission (appel API hx-console).
+function pollScope () {
+  if (DEMO) return
+  atk.scope().then((s) => { scopeC = s }).catch((e) => console.log('[scope]', e.message))
 }
 
 function paint () {
@@ -80,7 +85,10 @@ function paint () {
 
 pollFast()
 setInterval(pollFast, Math.min(refreshMs, 3000))
-if (!DEMO) { pollEgress(); setInterval(pollEgress, egressMs) }
+if (!DEMO) {
+  pollEgress(); setInterval(pollEgress, egressMs)
+  pollScope(); setInterval(pollScope, (cfg.scope && cfg.scope.refreshMs) || 15000)
+}
 if (cryptoOn) { const pc = () => fetchCrypto().catch((e) => console.log('[crypto]', e.message)); pc(); setInterval(pc, cryptoMs) }
 
 bar.run()

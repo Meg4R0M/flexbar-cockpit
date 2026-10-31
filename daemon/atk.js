@@ -76,19 +76,41 @@ async function egress () {
 }
 function egressCached () { return egressC }
 
-// ---------- Scope / mission ----------
+// ---------- Scope / mission (API HX-Platform hx-console) ----------
+// Armé = une mission au statut « in_progress » existe (scope-firewall actif). Sinon LIBRE.
 let scopeC = { armed: false, mission: null }
-function scope () {
+function getJson (url, headers) {
+  return new Promise((resolve, reject) => {
+    try {
+      const u = new URL(url)
+      const lib = u.protocol === 'http:' ? require('http') : https
+      const req = lib.get({ hostname: u.hostname, port: u.port || undefined, path: u.pathname + u.search, timeout: 4000, headers }, (r) => {
+        let d = ''
+        r.on('data', (c) => { d += c })
+        r.on('end', () => {
+          if (r.statusCode !== 200) return reject(new Error('hx-console HTTP ' + r.statusCode))
+          try { resolve(JSON.parse(d)) } catch (e) { reject(new Error('hx-console: JSON invalide')) }
+        })
+      })
+      req.on('error', reject)
+      req.on('timeout', () => req.destroy(new Error('hx-console: timeout')))
+    } catch (e) { reject(e) }
+  })
+}
+async function scope () {
   const c = cfg().scope || {}
-  let mission = null
-  for (const f of [c.missionFile, '/run/hx/mission', (process.env.HOME || '/root') + '/hx/current'].filter(Boolean)) {
-    try { const v = fs.readFileSync(f, 'utf8').trim(); if (v) { mission = v.split('\n')[0]; break } } catch (_) {}
+  if (!c.apiUrl) { scopeC = { armed: false, mission: null }; return scopeC }
+  const headers = { Accept: 'application/json' }
+  if (c.apiKey) headers[c.headerName || 'X-API-Key'] = c.apiKey
+  const active = c.activeStatus || 'in_progress'
+  try {
+    const j = await getJson(c.apiUrl.replace(/\/$/, '') + (c.path || '/api/missions/'), headers)
+    const arr = Array.isArray(j) ? j : (j.missions || j.data || [])
+    const m = arr.find((x) => (x.status || x.statut) === active)
+    scopeC = { armed: !!m, mission: m ? (m.nom || m.name || m.id || null) : null }
+  } catch (e) {
+    scopeC = { armed: scopeC.armed, mission: scopeC.mission, error: e.message } // garde le dernier état connu
   }
-  let armed
-  if (c.armedCmd) armed = sh(c.armedCmd) !== ''
-  else if (c.nftSet) armed = /elements\s*=/.test(sh('nft list set ' + c.nftSet + ' 2>/dev/null'))
-  else armed = !!mission // défaut : une mission chargée = garde-fou actif
-  scopeC = { armed, mission }
   return scopeC
 }
 function scopeCached () { return scopeC }

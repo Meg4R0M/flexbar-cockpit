@@ -44,8 +44,8 @@ in {
     };
     nodejs = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.nodejs_20;
-      description = "Paquet Node.js utilisé.";
+      default = pkgs.nodejs_22;
+      description = "Paquet Node.js utilisé (nodejs_20 est EOL/insecure sur nixpkgs 26.05 ; le démon tourne sur Node ≥ 18).";
     };
   };
 

@@ -17,7 +17,8 @@
   },
 
   "scope": {
-    "_comment": "Mission/périmètre via l'API HX-Platform hx-console. ⚠ hx-console n'est PAS local au nœud (il est sur M4/derrière le proxy mTLS) → apiUrl doit pointer vers l'endpoint JOIGNABLE depuis hx-atk1 (IP:port du conteneur, ou le proxy avec cert client). Tant que vide/injoignable : LIBRE. ARMÉ = une mission au statut activeStatus. apiKey = HX_PILOTE_TOKEN (SECRET).",
+    "_comment": "Mission/périmètre, lu LOCALEMENT sur le nœud : hx-exec-mcp écrit activeFile tant qu'une mission est ouverte (mission_id + container). Présent = ARMÉ + nom ; absent = LIBRE. Rien à joindre à distance. ⚠ Ne PAS mettre apiUrl en mode nœud : hx-console n'est pas joignable depuis hx-atk1 (mTLS + cookie de session, pas de jeton d'API ; HX_PILOTE_TOKEN ne vaut que pour hx-pilote en loopback sur le M4). apiUrl/path/apiKey/activeStatus ne servent QUE pour un cockpit DÉPORTÉ avec cert client signé par l'AC HX Console.",
+    "activeFile": "/srv/hx/missions/active.json",
     "apiUrl": null,
     "path": "/api/missions/",
     "headerName": "X-API-Key",
@@ -27,7 +28,7 @@
   },
 
   "sessions": {
-    "_comment": "C2 = Metasploit DANS Exegol (conteneur éphémère, lancé par mission). c2Cmd doit IMPRIMER LE NOMBRE de sessions — à brancher quand une mission tourne (ex. 'exegol exec <conteneur> msfconsole -qx \"sessions -l\"' parsé, ou msfrpc). null = C2 0.",
+    "_comment": "C2 = Metasploit DANS l'Exegol de la mission. c2Cmd doit IMPRIMER LE NOMBRE de sessions ; {container} est remplacé par le conteneur de la mission ouverte (lu dans activeFile). Exécuté en root (docker dispo). Doit être CHEAP (poll ~3 s) : un msfconsole complet démarre trop lentement (coupé par le timeout de 4 s → 0) ; préférer une requête à la base msf ou msfrpc. Ex. : 'docker exec {container} sh -lc \"psql -tAqX -U msf -d msf -c \\\"select count(*) from sessions where closed_at is null\\\"\"' (adapter les accès msfdb à la mission). null = C2 0 (plomberie en place, à caler quand une mission tourne).",
     "listenCmd": "ss -H -tln 2>/dev/null",
     "c2Cmd": null
   },

@@ -75,8 +75,10 @@ in {
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       # bash = `sh` requis par les scripts d'install npm (serialport). Le reste =
-      # outils lus par les collecteurs (egress/scope/sessions).
-      path = with pkgs; [ cfg.nodejs bash iproute2 wireguard-tools nftables coreutils gnugrep ];
+      # outils lus par les collecteurs : iproute2/wireguard (egress), docker pour
+      # le compte C2 dans l'Exegol de la mission. scope se lit dans un fichier
+      # local (/srv/hx/missions/active.json), aucun binaire requis.
+      path = with pkgs; [ cfg.nodejs bash iproute2 wireguard-tools nftables coreutils gnugrep docker ];
       environment = {
         SOCBAR_CONFIG = configPath;
         # fontconfig système (pour que canvas trouve Liberation + Noto emoji)

@@ -3,8 +3,8 @@
 // des valeurs partielles/par défaut en cas d'erreur. Spécificités du nœud = config.
 //   cfg.node     { tempZone }
 //   cfg.egress   { vpnInterface, probeUrl, refreshMs }
-//   cfg.scope    { missionFile, nftSet, armedCmd }
-//   cfg.sessions { c2Cmd, listenCmd }
+//   cfg.scope    { activeFile (défaut /srv/hx/missions/active.json), apiUrl? (cockpit déporté), path?, apiKey?, activeStatus?, refreshMs }
+//   cfg.sessions { c2Cmd (compte C2 ; {container} = Exegol de la mission), listenCmd }
 
 const os = require('os')
 const fs = require('fs')
@@ -74,8 +74,11 @@ async function egress () {
 }
 function egressCached () { return egressC }
 
-// ---------- Scope / mission (API HX-Platform hx-console) ----------
-// Armé = une mission au statut « in_progress » existe (scope-firewall actif). Sinon LIBRE.
+// ---------- Scope / mission (état LOCAL du nœud : active.json) ----------
+// Armé = une mission ouverte sur le nœud : hx-exec-mcp écrit active.json tant
+// qu'une mission tourne (mission_id + container). Sinon LIBRE. hx-console n'est
+// pas joignable depuis le nœud (mTLS + cookie de session) ; repli HTTP distant
+// seulement si cfg.scope.apiUrl est défini (cockpit déporté, avec cert client).
 let scopeC = { armed: false, mission: null }
 function getJson (url, headers) {
   return new Promise((resolve, reject) => {
@@ -95,9 +98,20 @@ function getJson (url, headers) {
     } catch (e) { reject(e) }
   })
 }
+// Lit l'état local de la mission : /srv/hx/missions/active.json (hx-exec-mcp).
+// Présent = ARMÉ ; renvoie aussi le conteneur Exegol pour le compte C2.
+function readActive () {
+  const f = (cfg().scope || {}).activeFile || '/srv/hx/missions/active.json'
+  try {
+    const j = JSON.parse(fs.readFileSync(f, 'utf8'))
+    const mission = j.mission_id || j.mission || j.nom || j.name || null
+    return { armed: !!(mission || j.scope_path || j.container), mission, container: j.container || null }
+  } catch (_) { return { armed: false, mission: null, container: null } }
+}
 async function scope () {
   const c = cfg().scope || {}
-  if (!c.apiUrl) { scopeC = { armed: false, mission: null }; return scopeC }
+  // Défaut : état LOCAL (active.json). Repli HTTP distant seulement si apiUrl.
+  if (!c.apiUrl) { const a = readActive(); scopeC = { armed: a.armed, mission: a.mission }; return scopeC }
   const headers = { Accept: 'application/json' }
   if (c.apiKey) headers[c.headerName || 'X-API-Key'] = c.apiKey
   const active = c.activeStatus || 'in_progress'
@@ -121,7 +135,16 @@ function sessions () {
   const lo = sh(c.listenCmd || 'ss -H -tln 2>/dev/null')
   const listeners = lo ? lo.split('\n').filter(Boolean).length : 0
   let c2 = 0
-  if (c.c2Cmd) c2 = parseInt(sh(c.c2Cmd), 10) || 0
+  if (c.c2Cmd) {
+    // {container} = conteneur Exegol de la mission ouverte (active.json). Sans
+    // mission/conteneur, on ne lance rien → 0. c2Cmd doit IMPRIMER un nombre.
+    let cmd = c.c2Cmd
+    if (cmd.includes('{container}')) {
+      const container = readActive().container
+      cmd = container ? cmd.split('{container}').join(container) : ''
+    }
+    if (cmd) c2 = parseInt(sh(cmd), 10) || 0
+  }
   sessC = { wg, c2, listeners }
   return sessC
 }

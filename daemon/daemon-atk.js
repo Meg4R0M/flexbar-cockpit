@@ -73,7 +73,12 @@ function paint () {
   try {
     bar.draw(S.scope.i, scopeTile(S.scope.w, scopeC))
     bar.draw(S.host.i, hostOverview(S.host.w, hostC, { cpu: histCpu, ram: histRam }))
-    bar.draw(S.egress.i, egressTile(S.egress.w, egressC))
+    // État egress : tunnel ? sinon LEAK si une mission est armée, sinon LAN (neutre).
+    const vpnIf = (cfg.egress && cfg.egress.vpnInterface) || null
+    const tun = egressC.via && /^(wg|tun|tailscale|nebula|proton|mullvad|zt)/i.test(egressC.via)
+    const onVpn = vpnIf ? (egressC.via === vpnIf) : tun
+    const estate = onVpn ? 'vpn' : (scopeC.armed ? 'leak' : 'lan')
+    bar.draw(S.egress.i, egressTile(S.egress.w, { ip: egressC.ip, via: egressC.via, state: estate }))
     bar.draw(S.sessions.i, sessionsTile(S.sessions.w, { ...sessC, mission: scopeC.mission }))
     const coins = cryptoOn ? cryptoCached() : []
     if (coins.length) {

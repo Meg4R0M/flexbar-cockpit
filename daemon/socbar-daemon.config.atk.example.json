@@ -1,5 +1,5 @@
 {
-  "_comment": "Config du mode « nœud d'attaque » (daemon-atk.js). Copie en socbar-daemon.config.json sur le nœud. Tout est optionnel : des défauts raisonnables s'appliquent. NE JAMAIS committer la copie remplie (contient apiKey).",
+  "_comment": "Config du mode « nœud d'attaque » (daemon-atk.js). Copie en socbar-daemon.config.json sur le nœud. Tout est optionnel : des défauts raisonnables s'appliquent. NE JAMAIS committer la copie remplie (peut contenir apiKey).",
   "serialPath": "/dev/ttyACM0",
   "refreshMs": 3000,
   "detailRotateMs": 3000,
@@ -10,24 +10,24 @@
   },
 
   "egress": {
-    "_comment": "OK (✅ VPN) si la route par défaut sort par vpnInterface ; sinon ⚠ LEAK. Déterminer l'interface du tunnel d'attaque sur le nœud (voir diagnostic). probeUrl=false pour ne pas sortir chercher l'IP.",
-    "vpnInterface": "wg0",
+    "_comment": "vpnInterface=null → auto-détecte un tunnel (wg*/tun*/tailscale) comme route de sortie → ✅ VPN. Hors tunnel : ⚠ LEAK si une mission est ARMÉE, sinon LAN (neutre). Mets un nom précis pour forcer une interface. probeUrl=false pour ne pas chercher l'IP publique.",
+    "vpnInterface": null,
     "probeUrl": "https://api.ipify.org",
     "refreshMs": 30000
   },
 
   "scope": {
-    "_comment": "Mission/périmètre via l'API HX-Platform hx-console. ARMÉ = une mission au statut activeStatus existe. apiKey = HX_PILOTE_TOKEN (SECRET — ne pas committer). Le nœud joint hx-console en local ou via le proxy.",
-    "apiUrl": "http://127.0.0.1:8452",
+    "_comment": "Mission/périmètre via l'API HX-Platform hx-console. ⚠ hx-console n'est PAS local au nœud (il est sur M4/derrière le proxy mTLS) → apiUrl doit pointer vers l'endpoint JOIGNABLE depuis hx-atk1 (IP:port du conteneur, ou le proxy avec cert client). Tant que vide/injoignable : LIBRE. ARMÉ = une mission au statut activeStatus. apiKey = HX_PILOTE_TOKEN (SECRET).",
+    "apiUrl": null,
     "path": "/api/missions/",
     "headerName": "X-API-Key",
-    "apiKey": "REMPLACE_MOI",
+    "apiKey": null,
     "activeStatus": "in_progress",
     "refreshMs": 15000
   },
 
   "sessions": {
-    "_comment": "C2 = Metasploit (dans Exegol). c2Cmd doit IMPRIMER LE NOMBRE de sessions (voir diagnostic pour trouver la bonne commande : msfrpc, base PostgreSQL msf, ou exegol exec). Laisse null tant que non déterminé.",
+    "_comment": "C2 = Metasploit DANS Exegol (conteneur éphémère, lancé par mission). c2Cmd doit IMPRIMER LE NOMBRE de sessions — à brancher quand une mission tourne (ex. 'exegol exec <conteneur> msfconsole -qx \"sessions -l\"' parsé, ou msfrpc). null = C2 0.",
     "listenCmd": "ss -H -tln 2>/dev/null",
     "c2Cmd": null
   },

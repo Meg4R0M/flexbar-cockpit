@@ -9,7 +9,7 @@ const jit = (b) => Array.from({ length: 30 }, (_, i) => Math.max(0, Math.min(1, 
 const tiles = [
   { buf: R.scopeTile(120, { armed: true, mission: 'acme-redteam' }) },
   { buf: R.hostOverview(600, { cpu: 0.37, ram: 0.52, load: 3.1, cores: 16, temp: 61 }, { cpu: jit(0.37), ram: jit(0.52) }) },
-  { buf: R.egressTile(400, { ip: '185.220.101.47', via: 'wg0', ok: true }) },
+  { buf: R.egressTile(400, { ip: '185.220.101.47', via: 'wg0', state: 'vpn' }) },
   { buf: R.sessionsTile(500, { mission: 'acme-redteam', wg: true, c2: 3, listeners: 2 }) },
   { buf: R.cryptoTile(460, { base: 'BTC', priceStr: '$81,176', changePct: 6.05, index: 0, total: 7 }) }
 ]

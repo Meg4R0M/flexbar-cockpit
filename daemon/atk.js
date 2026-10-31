@@ -66,12 +66,10 @@ function fetchIp (url) {
 }
 async function egress () {
   const c = cfg().egress || {}
-  const vpnIf = c.vpnInterface || 'wg0'
-  const via = defaultIface()
-  const ok = !!via && via === vpnIf // route par défaut via le tunnel = pas de fuite
+  const via = defaultIface() // interface de la route par défaut (ex. lan0, wg0…)
   let ip = egressC.ip
   if (c.probeUrl !== false) ip = (await fetchIp(c.probeUrl || 'https://api.ipify.org')) || ip
-  egressC = { ip, via, ok }
+  egressC = { ip, via } // l'état vpn/leak/lan est décidé par le démon (connaît le scope)
   return egressC
 }
 function egressCached () { return egressC }

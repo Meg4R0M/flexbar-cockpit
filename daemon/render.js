@@ -251,22 +251,24 @@ function hostOverview (width, h, hist) {
   ])
 }
 
-// Egress — IP publique de sortie + VPN/LEAK. e={ip, via, ok}.
+// Egress — IP publique de sortie + état tunnel. e={ip, via, state:'vpn'|'leak'|'lan'}.
+//  vpn = sortie par le tunnel (vert) · leak = hors tunnel alors qu'une mission est ARMÉE
+//  (rouge) · lan = sortie LAN sans mission (neutre, pas d'alarme).
 function egressTile (width, e) {
   const { canvas, ctx } = newCanvas(width)
-  const ok = !!e.ok
-  const col = ok ? C.ok : C.crit
+  const state = e.state || 'lan'
+  const col = state === 'vpn' ? C.ok : state === 'leak' ? C.crit : C.idle
   labelWith(ctx, 0, '🌐', col, 'EGRESS' + (e.via ? ' ' + String(e.via).toUpperCase() : ''))
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
   const f = fit(ctx, e.ip || '—', width - 130, 20)
   ctx.fillStyle = C.text; ctx.font = '700 ' + f.px + 'px ' + UIFONT
   ctx.fillText(f.text, 12, 40)
   ctx.textAlign = 'right'
-  const stxt = ok ? 'VPN' : 'LEAK'
+  const stxt = state === 'vpn' ? 'VPN' : state === 'leak' ? 'LEAK' : 'LAN'
   ctx.fillStyle = col; ctx.font = '700 15px ' + UIFONT
   ctx.fillText(stxt, width - 12, 40)
   const sw = ctx.measureText(stxt).width
-  icon(ctx, ok ? '✅' : '⚠️', width - 12 - sw - 22, 40, 15)
+  icon(ctx, state === 'vpn' ? '✅' : state === 'leak' ? '⚠️' : '🌐', width - 12 - sw - 22, 40, 15)
   return canvasToRgbPng(canvas)
 }
 

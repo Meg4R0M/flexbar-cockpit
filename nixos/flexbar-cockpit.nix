@@ -74,8 +74,9 @@ in {
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
-      # Outils lus par les collecteurs (egress/scope/sessions) + build.
-      path = with pkgs; [ cfg.nodejs iproute2 wireguard-tools nftables coreutils gnugrep ];
+      # bash = `sh` requis par les scripts d'install npm (serialport). Le reste =
+      # outils lus par les collecteurs (egress/scope/sessions).
+      path = with pkgs; [ cfg.nodejs bash iproute2 wireguard-tools nftables coreutils gnugrep ];
       environment = {
         SOCBAR_CONFIG = configPath;
         # fontconfig système (pour que canvas trouve Liberation + Noto emoji)
